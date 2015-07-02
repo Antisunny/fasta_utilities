@@ -20,19 +20,18 @@
     my $class = shift;
     my $self;
     if (@_ == 1 && !ref $_[0]) {
-      # if only one arg left and it's not Class, so it's a normal name
+      # if only one arg left and it's not Class, so it's a normal file name or a array of file names
       $self->{files} = [$_[0]]; # anonymous array
     }else {
       $self = {@_}; # anonymous hash
-      # what does this mean?
     }
     $self = bless $self, $class;
-    $self->{files} = \@ARGV unless exists $self->{files} or exists $self->{fh};
-    $self->BUILD($self);
+    # $self->{files} = \@ARGV unless exists $self->{files} or exists $self->{fh};
+    $self->_init($self);
     return $self;
   }
 
-  sub BUILD {
+  sub _init {
     my $self = shift;
     unless ($self->{fh}) {
 
