@@ -5,12 +5,12 @@
   use Carp;
   use FileBar;
 
-  our $VERSION = '0.25';
+  our $VERSION = '0.25.1';
 
   #hack to use autodie with overridden builtins
   sub close {
     use autodie qw(close);
-    my ($self) = @_;
+    my $self = shift;
     CORE::close($self->{fh});
   }
 
@@ -20,9 +20,11 @@
     my $class = shift;
     my $self;
     if (@_ == 1 && !ref $_[0]) {
-      $self->{files} = [$_[0]];
+      # if only one arg left and it's not Class, so it's a normal name
+      $self->{files} = [$_[0]]; # anonymous array
     }else {
-      $self = {@_};
+      $self = {@_}; # anonymous hash
+      # what does this mean?
     }
     $self = bless $self, $class;
     $self->{files} = \@ARGV unless exists $self->{files} or exists $self->{fh};
@@ -31,7 +33,7 @@
   }
 
   sub BUILD {
-    my ($self) = @_;
+    my $self = shift;
     unless ($self->{fh}) {
 
       #automatically unzip gzip and bzip files
@@ -59,14 +61,14 @@
   }
 
   sub next_file {
-    my ($self) = @_;
+    my $self = shift;
     $self->{file_itr}++;
     return if $self->{file_itr} >= @{$self->files};
     $self->current_file($self->files->[$self->{file_itr}]);
   }
 
   sub next_seq {
-    my ($self) = @_;
+    my $self = shift;
     return &{$self->{reader}};
   }
 
@@ -87,26 +89,30 @@
   }
 
   sub _create_reader{
-    my($self) = @_;
+    my ($self) = @_;
     my $first_char = $self->_get_first($self->{fh});
     my $reader =    $first_char eq ">" ? sub { $self->_read_fasta }
       : $first_char eq "@" ? sub { $self->_read_fastq }
-      :                      croak "Not a fasta or fastq file, $first_char is not > or @";
+      : croak "Input Error: Not a fasta or fastq file, $first_char is not > or @";
     return $reader;
   }
   sub _get_first{
     my($self, $fh) = @_;
     local $/ = \1;
+    # This means that $first will read 1 character from $fh
+    
+    # Setting $/ to a reference to an integer, scalar containing an integer, or scalar that's convertible to an integer
+    # will attempt to read records instead of lines, with the maximum record size being the referenced integer number of characters.
     my $first = <$fh>;
     return $first;
   }
 
   sub _read_fasta {
-    my ($self) = @_;
+    my $self = shift;
     local $/ = "\n>";
     if (defined(my $record = readline $self->{fh})) {
       chomp $record;
-      my($header, $sequence) = split qr{\n}o, $record, 2;
+      my($header, $sequence) = split qr{\n}o, $record, 2; #star
       $sequence =~ tr/\n\r\t //d;
       return ReadFastx::Fasta->new(header=>$header, sequence=>$sequence);
     }
@@ -118,7 +124,7 @@
   }
 
   sub _read_fastq {
-    my ($self) = @_;
+    my $self = shift;
     my $fh = $self->fh;
     my ($header, $sequence, $h2, $quality);
 
@@ -159,7 +165,7 @@
   }
 
   sub _end_of_files {
-    my ($self) = @_;
+    my $self = shift;
     return (eof $self->{fh} and $self->{file_itr} > @{$self->{files}});
   }
 
