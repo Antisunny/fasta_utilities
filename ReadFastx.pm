@@ -21,8 +21,7 @@
     my $self;
     if (@_ == 1 && !ref $_[0]) {
       $self->{files} = [$_[0]];
-    }
-    else {
+    }else {
       $self = {@_};
     }
     $self = bless $self, $class;
@@ -54,8 +53,7 @@
     my ($self, $file) = @_;
     if ($file) {
       $self->_set_current_file($file);
-    }
-    else {
+    }else {
       return exists $self->{current_file} ? $self->{current_file} : undef;
     }
   }
@@ -124,7 +122,6 @@
     my $fh = $self->fh;
     my ($header, $sequence, $h2, $quality);
 
-    #ugly for performance I am sorry
     {
       local $/ = "\n";
       $header = readline $fh;
@@ -207,9 +204,6 @@
 
   sub print {
     my ($self) = shift;
-    my $args  = @_ == 1 && ref $_[0]  ? $_[0]          : {@_};
-    my $fh    = exists $args->{fh}    ? $args->{fh}    : $PRINT_DEFAULT_FH;
-    my $width = exists $args->{width} ? $args->{width} : undef;
     print $fh $self->string(@_);
   }
 }
@@ -224,8 +218,11 @@
   Readonly my $PRINT_DEFAULT_FH => \*STDOUT;
   Readonly my $ILLUMINA_OFFSET  => 64;
   Readonly my $SANGER_OFFSET    => 32;
-
+  ##
+  #process one read per time
+  ##
   sub quality_array {
+    # quality_array functions to convert qual:string to qual:number-offset
     my ($self, $new) = @_;
     if (defined $new) {
       $self->{quality_array} = $new;
@@ -236,9 +233,12 @@
       $self->{quality_array} = [map { $_ - $offset } unpack "c*", $self->quality];
     }
     return $self->{quality_array};
+    # quality_array is numrical array
+    # while quality is a string of qual read from fastq files
   }
 
   sub quality {
+    # `quality sub` acts reversely with `sub quality_array`
     my ($self, $new) = @_;
     if (defined $new) {
       $self->{quality} = $new;
@@ -252,6 +252,7 @@
   }
 
   sub quality_at {
+    # get the numeric qual of position n each time
     my ($self, $position, $new) = @_;
     die "quality_at must specify a position" unless defined $position;
     if (defined $new) {
@@ -272,10 +273,6 @@
 
   sub print {
     my ($self) = shift;
-    my $args   = @_ == 1 && ref $_[0]  ? $_[0]            : {@_};
-    my $fh     = exists $args->{fh}    ? $args->{fh}      : $PRINT_DEFAULT_FH;
-    my $offset = $self->is_phred64     ? $ILLUMINA_OFFSET : $SANGER_OFFSET;
-    my $width  = exists $args->{width} ? $args->{width}   : undef;
     print $fh $self->string(@_);
   }
 
